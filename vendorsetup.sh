@@ -1,1 +1,1 @@
-add_lunch_combo cm_royss-userdebug
+add_lunch_combo carbon_royss-userdebug
