@@ -13,6 +13,7 @@
 # limitations under the License.
 
 $(call inherit-product, $(SRC_TARGET_DIR)/product/languages_full.mk)
+
 DEVICE_PACKAGE_OVERLAYS += device/samsung/royss/overlay
 
 ## Video
@@ -41,7 +42,9 @@ PRODUCT_PACKAGES += \
     audio.a2dp.default \
     audio.usb.default \
     audio_policy.conf \
-    libaudioutils
+    libaudioutils \
+    libdashplayer \
+    libtinyalsa
 
 ## Other HALs
 PRODUCT_PACKAGES += \
@@ -49,14 +52,41 @@ PRODUCT_PACKAGES += \
     lights.msm7x27a \
     gps.msm7x27a \
     power.msm7x27a \
-    healthd.msm7x27a \
-    libdashplayer
+    libhealthd.msm7x27a 
 
 ## FM radio
 PRODUCT_PACKAGES += \
     qcom.fmradio \
     libqcomfm_jni \
     FM2
+
+# Bluetooth
+PRODUCT_PACKAGES += \
+    bluetooth-headers \
+    hciconfig \
+    hciattach \
+    btmon \
+    btproxy \
+    bluetoothd-snoop \
+    btmgmt \
+    hcitool \
+    l2ping \
+    libsbc \
+    avinfo \
+    bccmd \
+    haltest \
+    libdbus \
+    audio.sco.default \
+    bluetoothd
+
+# Other
+PRODUCT_PACKAGES += \
+    libnetcmdiface \
+    libqservice
+
+# Product specific Packages
+PRODUCT_PACKAGES += \
+    SamsungServiceMode
 
 ## Recovery
 PRODUCT_COPY_FILES += \
@@ -77,6 +107,21 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.usb.accessory.xml:system/etc/permissions/android.hardware.usb.accessory.xml \
     frameworks/native/data/etc/android.hardware.usb.host.xml:system/etc/permissions/android.hardware.usb.host.xml
 
+## Qosmgr
+PRODUCT_COPY_FILES += \
+    device/samsung/royss/configs/qosmgr_rules.xml:system/etc/qosmgr_rules.xml
+
+## Media
+PRODUCT_COPY_FILES += \
+    device/samsung/royss/configs/media_codecs.xml:system/etc/media_codecs.xml \
+    device/samsung/royss/configs/media_profiles.xml:system/etc/media_profiles.xml 
+
+## Audio
+PRODUCT_COPY_FILES += \
+    device/samsung/royss/configs/audio_policy.conf:system/etc/audio_policy.conf \
+    device/samsung/royss/configs/AutoVolumeControl.txt:system/etc/AutoVolumeControl.txt \
+    device/samsung/royss/configs/AudioFilter.csv:system/etc/AudioFilter.csv
+
 ## Ramdisk
 PRODUCT_COPY_FILES += \
     $(call find-copy-subdir-files,*,device/samsung/royss/ramdisk,root)
@@ -85,11 +130,10 @@ PRODUCT_COPY_FILES += \
     vendor/samsung/royss/proprietary/system/lib/liboncrpc.so:obj/lib/liboncrpc.so \
     vendor/samsung/royss/proprietary/system/lib/libnv.so:obj/lib/libnv.so
 
-PRODUCT_PROPERTY_OVERRIDES += \
-    ro.bluetooth.remote.autoconnect=true \
-    ro.bluetooth.request.master=true \
-    ro.qualcomm.bluetooth.dun=true \
-    ro.qualcomm.bluetooth.ftp=true
+## Charger
+PRODUCT_PACKAGES += \
+    charger \
+    charger_res_images 
 
 PRODUCT_PROPERTY_OVERRIDES += \
     debug.gr.numframebuffers=3 \
@@ -99,15 +143,11 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.bq.gpu_to_cpu_unsupported=1 \
     ro.max.fling_velocity=4000 \
     ro.opengles.version=131072 \
-    ro.sf.lcd_density=160
+    ro.sf.lcd_density=140
 
 PRODUCT_PROPERTY_OVERRIDES += \
     dalvik.vm.dexopt-data-only=1 \
-    dalvik.vm.jit.codecachesize=1 \
-    ro.config.low_ram=true
-
-PRODUCT_PROPERTY_OVERRIDES += \
-    lpa.decode=true
+    dalvik.vm.jit.codecachesize=1
 
 PRODUCT_PROPERTY_OVERRIDES += \
     com.qc.hardware=true \
@@ -118,9 +158,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.sys.usb.config=mtp,adb \
     ro.vold.umsdirtyratio=50 
-
-#PRODUCT_PROPERTY_OVERRIDES += \
-# persist.webview.provider=classic
 
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.cwm.enable_key_repeat=true

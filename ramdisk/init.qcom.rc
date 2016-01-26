@@ -1,4 +1,5 @@
 import init.qcom.usb.rc
+import init.qcom.bt.rc
 
 on early-init
     mount debugfs debugfs /sys/kernel/debug
@@ -32,31 +33,47 @@ on init
     symlink /storage/usbdisk /usbdisk
     symlink /storage/usbdisk /mnt/usbdisk
 
+    mkdir /efs
 
 on fs
     # Mount partitions
     mount_all /fstab.qcom
 
+    # zRAM
+    swapon_all /fstab.qcom
+
     setprop ro.crypto.fuse_sdcard true
 
+    mount ext4 /dev/block/mmcblk0p16 /efs nosuid nodev barrier=1
+
 on boot
+    setenforce 0
+
     # Bluetooth
+    exec system/bin/btnvtool -O
+    setprop ro.bt.bdaddr_path "/efs/bluetooth/bt_addr"
+    chown bluetooth bluetooth ro.bt.bdaddr_path
     chown bluetooth bluetooth /sys/module/bluetooth_power/parameters/power
     chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
     chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
     chown bluetooth bluetooth /proc/bluetooth/sleep/proto
-    chown bluetooth bluetooth /proc/bcm/sleep/proto
     chown system system /sys/module/sco/parameters/disable_esco
     chown bluetooth bluetooth /sys/module/hci_smd/parameters/hcismd_set
     chmod 0660 /sys/module/bluetooth_power/parameters/power
     chmod 0660 /sys/module/hci_smd/parameters/hcismd_set
     chmod 0660 /sys/class/rfkill/rfkill0/state
     chmod 0660 /proc/bluetooth/sleep/proto
-    chmod 0660 /proc/bcm/sleep/proto
     chown bluetooth bluetooth /dev/ttyHS0
     chmod 0660 /dev/ttyHS0
     chown bluetooth bluetooth /sys/devices/platform/msm_serial_hs.0/clock
     chmod 0660 /sys/devices/platform/msm_serial_hs.0/clock
+
+    chmod 0660 /dev/ttyHS2
+    chown bluetooth bluetooth /dev/ttyHS2
+
+    ## EFS
+    chown system radio /efs
+    chmod 0771 /efs
 
     ## Setup Wi-Fi
     mkdir /data/misc/wifi 0770 wifi wifi
@@ -105,6 +122,10 @@ on boot
     write /proc/sys/net/ipv6/conf/rmnet_sdio6/accept_ra 2
     write /proc/sys/net/ipv6/conf/rmnet_sdio7/accept_ra 2
 
+    # zRAM
+    write /proc/sys/vm/page-cluster 0
+    write /proc/sys/vm/swappiness 70
+
     # Chown polling nodes as needed from UI running on system server
     chown system system /sys/devices/platform/msm_sdcc.1/polling
     chown system system /sys/devices/platform/msm_sdcc.2/polling
@@ -135,6 +156,7 @@ on boot
 
     #Camera daemon
     start qcamerasvr
+    start gpu_dcvsd
 
 on post-fs-data
     # Create log system
@@ -232,10 +254,16 @@ service qmuxd /system/bin/qmuxd
     user radio
     group radio audio bluetooth gps qcom_diag
 
+#start camera server as daemon
 service qcamerasvr /system/bin/mm-qcamera-daemon
+        class late_start
+        user camera
+        group camera system inet audio
+
+service gpu_dcvsd /system/bin/gpu_dcvsd
     class late_start
-    user camera
-    group camera system inet audio
+    user root
+    oneshot
 
 # create virtual SD card at /storage/sdcard, based on the /data/media directory
 # daemon will drop to user/group system/media_rw after initializing
@@ -260,3 +288,22 @@ service lpmkey /system/bin/charging_mode
     class charger
     user root
     oneshot
+
+service qosmgrd /system/bin/qosmgr /system/etc/qosmgr_rules.xml
+    class late_start
+    user system
+    group system
+
+# CM Performance Profiles
+# Powersave
+on property:sys.perf.profile=0
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor powersave
+
+# Balanced
+on property:sys.perf.profile=1
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor interactive
+
+# High performance
+on property:sys.perf.profile=2
+    write /sys/devices/system/cpu/cpu0/online 1
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor performance
